@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { dashboardAPI, marksAPI, attendanceAPI } from '../../services/api';
+import { dashboardAPI } from '../../services/api'; // ✅ removed marksAPI, attendanceAPI
 import toast from 'react-hot-toast';
 
 // Import components
@@ -43,21 +43,17 @@ const TeacherDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Sidebar fixed at 256px */}
       <TeacherSidebar />
-
-      {/* Main Content with left margin equal to sidebar width */}
       <div className="ml-64 flex flex-col min-h-screen">
         <TeacherHeader user={user} logout={logout} />
-        
         <main className="flex-1 p-6">
-            <Routes>
-              <Route path="/" element={<Navigate to="/teacher/overview" replace />} />
-              <Route path="/overview" element={<TeacherOverview data={dashboardData} />} />
-              <Route path="/marks" element={<MarksManagement />} />
-              <Route path="/attendance" element={<AttendanceManagement />} />
-              <Route path="/reports" element={<Reports data={dashboardData} />} />
-            </Routes>
+          <Routes>
+            <Route path="/" element={<Navigate to="/teacher/overview" replace />} />
+            <Route path="/overview" element={<TeacherOverview data={dashboardData} />} />
+            <Route path="/marks" element={<MarksManagement />} />
+            <Route path="/attendance" element={<AttendanceManagement />} />
+            <Route path="/reports" element={<Reports data={dashboardData} />} />
+          </Routes>
         </main>
       </div>
     </div>
