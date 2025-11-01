@@ -1,0 +1,33 @@
+{
+  "name": "college-management-system",
+  "version": "1.0.0",
+  "description": "A comprehensive college management system with student, teacher, and admin portals",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "cd server && npm start",
+    "build": "cd client && npm install && npm run build",
+    "postinstall": "cd client && npm install",
+    "server": "cd server && npm start",
+    "client": "cd client && npm start",
+    "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
+    "server:dev": "cd server && npm run dev",
+    "client:dev": "cd client && npm start",
+    "seed": "cd server && node scripts/seedData.js"
+  },
+  "keywords": [
+    "college",
+    "management",
+    "education",
+    "portal"
+  ],
+  "author": "College Management System",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "express": "^5.1.0",
+    "mongodb": "^3.6.10"
+  }
+}
