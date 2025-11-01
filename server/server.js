@@ -116,11 +116,25 @@ app.get('/api/health', (req, res) => {
 
 // ✅ Serve React Frontend (Build Folder) - Production only
 if (config.NODE_ENV === 'production') {
-  const clientBuildPath = path.join(__dirname, '../client/build');
+  // Check multiple possible locations for build folder
+  const possiblePaths = [
+    path.join(__dirname, '../client/build'),
+    path.join(__dirname, 'client-build'),
+    path.join(__dirname, '../client-build'),
+  ];
   
-  // Check if build exists
   const fs = require('fs');
-  if (fs.existsSync(clientBuildPath)) {
+  let clientBuildPath = null;
+  
+  for (const buildPath of possiblePaths) {
+    if (fs.existsSync(buildPath)) {
+      clientBuildPath = buildPath;
+      console.log(`✅ Found client build at: ${clientBuildPath}`);
+      break;
+    }
+  }
+  
+  if (clientBuildPath) {
     app.use(express.static(clientBuildPath));
 
     // Serve React app for all non-API routes
@@ -133,6 +147,7 @@ if (config.NODE_ENV === 'production') {
     });
   } else {
     console.warn('⚠️  Client build folder not found. Frontend will not be served.');
+    console.warn('   Checked paths:', possiblePaths);
   }
 }
 

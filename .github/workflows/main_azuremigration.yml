@@ -23,26 +23,45 @@ jobs:
         with:
           node-version: '18.x'
           cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            client/package-lock.json
+            server/package-lock.json
 
       - name: Install root dependencies
-        run: npm install
+        run: npm ci --prefer-offline --no-audit
 
       - name: Build React client
         run: |
           cd client
-          npm install
-          npm run build
+          npm ci --prefer-offline --no-audit
+          CI=false GENERATE_SOURCEMAP=false npm run build
+        env:
+          CI: false
+          GENERATE_SOURCEMAP: false
+
+      - name: Verify client build
+        run: |
+          if [ ! -d "client/build" ]; then
+            echo "Build folder not found!"
+            exit 1
+          fi
+          echo "Build successful!"
 
       - name: Install server dependencies
         run: |
           cd server
-          npm install
+          npm ci --prefer-offline --no-audit
+
+      - name: Copy client build to server
+        run: |
+          cp -r client/build server/client-build || true
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: .
+          path: server
 
   deploy:
     runs-on: ubuntu-latest
@@ -70,5 +89,4 @@ jobs:
         with:
           app-name: 'azuremigration'
           slot-name: 'Production'
-          package: ./server
-          startup-command: 'npm start'
+          package: .
