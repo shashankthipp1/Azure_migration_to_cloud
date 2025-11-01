@@ -1,4 +1,3 @@
 [config]
 SCM_DO_BUILD_DURING_DEPLOYMENT=true
-POST_BUILD_COMMAND="cd server && npm start"
-
+POST_BUILD_COMMAND="cd ../client && npm install && npm run build"
