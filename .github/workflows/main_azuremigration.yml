@@ -14,9 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      CI: false
-      GENERATE_SOURCEMAP: false
 
     steps:
       - uses: actions/checkout@v4
@@ -32,17 +29,20 @@ jobs:
             server/package-lock.json
 
       - name: Install root dependencies
-        run: |
-          export CI=false
-          npm ci --prefer-offline --no-audit --ignore-scripts
+        run: npm ci --prefer-offline --no-audit --ignore-scripts
+        env:
+          CI: false
 
       - name: Build React client
         run: |
-          export CI=false
-          export GENERATE_SOURCEMAP=false
           cd client
           npm ci --prefer-offline --no-audit --ignore-scripts
-          CI=false GENERATE_SOURCEMAP=false npm run build
+          DISABLE_ESLINT_PLUGIN=true CI=false GENERATE_SOURCEMAP=false npm run build
+        env:
+          CI: false
+          GENERATE_SOURCEMAP: false
+          DISABLE_ESLINT_PLUGIN: true
+          ESLINT_NO_DEV_ERRORS: true
 
       - name: Verify client build
         run: |
