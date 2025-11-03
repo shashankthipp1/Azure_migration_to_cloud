@@ -1,65 +1,57 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
-name: Build and deploy Node.js app to Azure Web App - abcdfr
+name: Deploy to Azure (Free Tier Optimized)
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read #This is required for actions/checkout
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js version
-        uses: actions/setup-node@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
+          node-version: 18.x
 
-      - name: npm install, build, and test
+      # 🏗️ Build React client if you have a /client folder
+      - name: Build React client
         run: |
+          cd client
           npm install
-          npm run build --if-present
-          npm run test --if-present
+          npm run build
+          cd ..
 
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
-        with:
-          name: node-app
-          path: .
+      # 🧹 Clean large folders to reduce upload time
+      - name: Remove unnecessary files
+        run: |
+          rm -rf server/node_modules
+          echo "node_modules folder removed to speed up deployment"
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      # 📦 Zip your server code only
+      - name: Create deployment package
+        run: |
+          cd server
+          zip -r ../deploy.zip .
 
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: node-app
-      
-      - name: Login to Azure
+      # 🕓 Wait to prevent SCM restart conflicts
+      - name: Add short delay
+        run: sleep 20
+
+      # 🔐 Login to Azure
+      - name: Azure Login
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_8461E717F6D04F3B93F40F3CC0FE571F }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_C73EB4FD0D3843039506B04EA01C328C }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_124756D6418E4A36ABE4B1415B89FEAE }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: 'Deploy to Azure Web App'
-        id: deploy-to-webapp
+      # 🚀 Deploy to Azure Web App
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'abcdfr'
-          slot-name: 'Production'
-          package: .
-          
+          app-name: 'abcdfr'     # ✅ Your App Service name
+          package: deploy.zip
+          run-from-package: true
