@@ -24,8 +24,8 @@ jobs:
           node-version: '18.x'
           cache: ''
 
-      # --- 🧹 Clean up any old or corrupted lock files ---
-      - name: Remove possible mismatched lock files
+      # --- 🧹 Clean up old lock files and node_modules ---
+      - name: Clean project
         run: |
           rm -f package-lock.json || true
           rm -f client/package-lock.json || true
@@ -38,26 +38,20 @@ jobs:
         env:
           CI: false
 
-      # --- ⚙️ Build the React client with self-healing for npm ci ---
-      - name: Build React client (auto-fix npm ci errors)
+      # --- ⚙️ Build the React client ---
+      - name: Build React client
         run: |
-          cd client
           echo "🧩 Installing client dependencies..."
-          if ! npm ci --prefer-offline --no-audit --ignore-scripts; then
-            echo "⚠️ npm ci failed due to lock file mismatch. Repairing..."
-            rm -rf node_modules package-lock.json
-            npm install typescript@4.9.5 --save-dev
-            npm install
-          fi
+          npm --prefix client install --no-audit --fund=false
           echo "🚀 Building client..."
-          DISABLE_ESLINT_PLUGIN=true CI=false GENERATE_SOURCEMAP=false npm run build
+          npx cross-env DISABLE_ESLINT_PLUGIN=true CI=false GENERATE_SOURCEMAP=false npm --prefix client run build
         env:
           CI: false
           GENERATE_SOURCEMAP: false
           DISABLE_ESLINT_PLUGIN: true
           ESLINT_NO_DEV_ERRORS: true
 
-      # --- ✅ Verify that the client build exists ---
+      # --- ✅ Verify build ---
       - name: Verify client build
         run: |
           if [ ! -d "client/build" ]; then
@@ -68,26 +62,24 @@ jobs:
 
       # --- 🧩 Install server dependencies ---
       - name: Install server dependencies
-        run: |
-          cd server
-          npm install --no-audit --fund=false
+        run: npm --prefix server install --no-audit --fund=false
         env:
           CI: false
 
-      # --- 🔗 Copy React build output into server ---
+      # --- 🔗 Copy client build into server ---
       - name: Copy client build to server
         run: |
           rm -rf server/client-build || true
           cp -r client/build server/client-build
 
-      # --- 📤 Upload the server (with client build) as artifact ---
+      # --- 📤 Upload for deployment ---
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
           path: server
 
-  # --- 🚀 Deployment job ---
+  # --- 🚀 Deploy job ---
   deploy:
     runs-on: ubuntu-latest
     needs: build
@@ -96,7 +88,7 @@ jobs:
       contents: read
 
     steps:
-      - name: Download artifact from build job
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: node-app
