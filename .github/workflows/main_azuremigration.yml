@@ -37,12 +37,12 @@ jobs:
         env:
           CI: false
 
-      - name: Build React client
+      - name: Build React client (clean lock + install)
         run: |
           rm -f client/package-lock.json || true
           cd client
-          # try clean install first, then standard install as fallback
-          (npm ci --prefer-offline --no-audit --ignore-scripts) || npm install --no-audit --fund=false --ignore-scripts
+          rm -rf node_modules || true
+          npm install --no-audit --fund=false
           DISABLE_ESLINT_PLUGIN=true CI=false GENERATE_SOURCEMAP=false npm run build
         env:
           CI: false
@@ -58,11 +58,12 @@ jobs:
           fi
           echo "Build successful!"
 
-      - name: Install server dependencies
+      - name: Install server dependencies (clean lock + install)
         run: |
           rm -f server/package-lock.json || true
           cd server
-          (npm ci --prefer-offline --no-audit --ignore-scripts) || npm install --no-audit --fund=false --ignore-scripts
+          rm -rf node_modules || true
+          npm install --no-audit --fund=false
 
       - name: Copy client build to server
         run: |
