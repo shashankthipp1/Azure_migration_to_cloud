@@ -1,5 +1,5 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
+# Docs for Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# Node.js + React (client) + Express (server) deployment to Azure Web App
 
 name: Build and deploy Node.js app to Azure Web App - azuremigration
 
@@ -24,54 +24,70 @@ jobs:
           node-version: '18.x'
           cache: ''
 
-      - name: Remove lock files to avoid mismatches
+      # --- 🧹 Clean up any old or corrupted lock files ---
+      - name: Remove possible mismatched lock files
         run: |
           rm -f package-lock.json || true
           rm -f client/package-lock.json || true
           rm -f server/package-lock.json || true
+          rm -rf client/node_modules server/node_modules || true
 
+      # --- 📦 Install root dependencies ---
       - name: Install root dependencies
-        run: |
-          npm install --no-audit --fund=false --ignore-scripts
+        run: npm install --no-audit --fund=false --ignore-scripts
         env:
           CI: false
 
-      - name: Build React client (clean lock + install)
+      # --- ⚙️ Build the React client with self-healing for npm ci ---
+      - name: Build React client (auto-fix npm ci errors)
         run: |
-          rm -f client/package-lock.json || true
-          rm -rf client/node_modules || true
-          npm --prefix client install --no-audit --fund=false
-          CI=false DISABLE_ESLINT_PLUGIN=true GENERATE_SOURCEMAP=false npm --prefix client run build
+          cd client
+          echo "🧩 Installing client dependencies..."
+          if ! npm ci --prefer-offline --no-audit --ignore-scripts; then
+            echo "⚠️ npm ci failed due to lock file mismatch. Repairing..."
+            rm -rf node_modules package-lock.json
+            npm install typescript@4.9.5 --save-dev
+            npm install
+          fi
+          echo "🚀 Building client..."
+          DISABLE_ESLINT_PLUGIN=true CI=false GENERATE_SOURCEMAP=false npm run build
         env:
           CI: false
           GENERATE_SOURCEMAP: false
           DISABLE_ESLINT_PLUGIN: true
           ESLINT_NO_DEV_ERRORS: true
 
+      # --- ✅ Verify that the client build exists ---
       - name: Verify client build
         run: |
           if [ ! -d "client/build" ]; then
-            echo "Build folder not found!"
+            echo "❌ Build folder not found!"
             exit 1
           fi
-          echo "Build successful!"
+          echo "✅ Client build successful!"
 
-      - name: Install server dependencies (clean lock + install)
+      # --- 🧩 Install server dependencies ---
+      - name: Install server dependencies
         run: |
-          rm -f server/package-lock.json || true
-          rm -rf server/node_modules || true
-          npm --prefix server install --no-audit --fund=false
+          cd server
+          npm install --no-audit --fund=false
+        env:
+          CI: false
 
+      # --- 🔗 Copy React build output into server ---
       - name: Copy client build to server
         run: |
-          cp -r client/build server/client-build || true
+          rm -rf server/client-build || true
+          cp -r client/build server/client-build
 
+      # --- 📤 Upload the server (with client build) as artifact ---
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
           path: server
 
+  # --- 🚀 Deployment job ---
   deploy:
     runs-on: ubuntu-latest
     needs: build
@@ -84,7 +100,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-app
-      
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -92,8 +108,7 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F0B4382A694A4BA69ECF025E41CCE69E }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_914C6BBC30DB49D7B76D4AB151CA30D8 }}
 
-      - name: 'Deploy to Azure Web App'
-        id: deploy-to-webapp
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'azuremigration'
