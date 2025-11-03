@@ -31,14 +31,18 @@ jobs:
           rm -f server/package-lock.json || true
 
       - name: Install root dependencies
-        run: npm install --no-audit --fund=false --ignore-scripts
+        run: |
+          # try clean install, fall back to install if lockfile mismatch
+          (npm ci --prefer-offline --no-audit --ignore-scripts) || npm install --no-audit --fund=false --ignore-scripts
         env:
           CI: false
 
       - name: Build React client
         run: |
+          rm -f client/package-lock.json || true
           cd client
-          npm install --no-audit --fund=false --ignore-scripts
+          # try clean install first, then standard install as fallback
+          (npm ci --prefer-offline --no-audit --ignore-scripts) || npm install --no-audit --fund=false --ignore-scripts
           DISABLE_ESLINT_PLUGIN=true CI=false GENERATE_SOURCEMAP=false npm run build
         env:
           CI: false
@@ -56,8 +60,9 @@ jobs:
 
       - name: Install server dependencies
         run: |
+          rm -f server/package-lock.json || true
           cd server
-          npm install --no-audit --fund=false --ignore-scripts
+          (npm ci --prefer-offline --no-audit --ignore-scripts) || npm install --no-audit --fund=false --ignore-scripts
 
       - name: Copy client build to server
         run: |
